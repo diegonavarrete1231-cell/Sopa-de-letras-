@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Sopa de Letras - Microsoft Word</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      text-align: center;
+      background: #f4f6fb;
+      color: #1e2a4a;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      color: #2a4d9c;
+    }
+    p {
+      font-size: 16px;
+    }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(18, 32px);
+      grid-gap: 3px;
+      justify-content: center;
+      margin: 20px auto;
+      user-select: none;
+    }
+    .cell {
+      width: 32px;
+      height: 32px;
+      background: white;
+      border: 1px solid #cfd8dc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      color: #2a4d9c;
+      transition: background 0.2s;
+    }
+    .cell:hover {
+      background: #e3f2fd;
+    }
+    .selected {
+      background: #bbdefb;
+    }
+    .found {
+      background: #1565c0 !important;
+      color: white;
+    }
+    #words {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+    #words span {
+      display: inline-block;
+      margin: 5px;
+      padding: 5px 8px;
+      background: #e3f2fd;
+      border: 1px solid #90caf9;
+      border-radius: 4px;
+      color: #0d47a1;
+      font-size: 14px;
+    }
+    #words .found {
+      text-decoration: line-through;
+      background: #1565c0;
+      border-color: #0d47a1;
+      color: white;
+    }
+    #message {
+      margin-top: 25px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #1565c0;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Sopa de Letras - Microsoft Word</h1>
+  <p>Encuentra todas las palabras relacionadas con Microsoft Word:</p>
+
+  <div id="board"></div>
+  <div id="words"></div>
+  <div id="message">🎉 ¡Felicidades! Completaste la sopa de letras 🎉</div>
+
+  <script>
+    // Palabras del libro
+    const words = [
+      "PROCESADORDETEXTO", "DOCUMENTOS", "EDICION", "FORMATO", "FUENTE",
+      "ESTILO", "PARRAFO", "TABLAS", "IMAGENES", "ENCABEZADO",
+      "PIEDEPAGINA", "ORTOGRAFIA", "GRAMATICA", "PLANTILLAS", "REVISION"
+    ];
+
+    const size = 18;
+    let board = Array(size).fill(null).map(()=>Array(size).fill(""));
+
+    // Direcciones posibles (fila, columna)
+    const directions = [
+      [0,1],  [0,-1],  [1,0],  [-1,0],
+      [1,1],  [-1,-1], [1,-1], [-1,1]
+    ];
+
+    // Insertar palabra en el tablero
+    function placeWord(word) {
+      let placed = false;
+      while (!placed) {
+        const dir = directions[Math.floor(Math.random()*directions.length)];
+        const row = Math.floor(Math.random()*size);
+        const col = Math.floor(Math.random()*size);
+        let r = row, c = col;
+        let ok = true;
+
+        for (let i = 0; i < word.length; i++) {
+          if (r < 0 || r >= size || c < 0 || c >= size) { ok = false; break; }
+          if (board[r][c] !== "" && board[r][c] !== word[i]) { ok = false; break; }
+          r += dir[0]; c += dir[1];
+        }
+
+        if (ok) {
+          r = row; c = col;
+          for (let i = 0; i < word.length; i++) {
+            board[r][c] = word[i];
+            r += dir[0]; c += dir[1];
+          }
+          placed = true;
+        }
+      }
+    }
+
+    // Colocar todas las palabras
+    words.forEach(w => {
+      let word = Math.random() > 0.5 ? w.split("").reverse().join("") : w;
+      placeWord(word);
+    });
+
+    // Rellenar con letras aleatorias
+    const alphabet = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ";
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if (board[r][c] === "") {
+          board[r][c] = alphabet[Math.floor(Math.random() * alphabet.length)];
+        }
+      }
+    }
+
+    // Pintar tablero
+    const boardDiv = document.getElementById("board");
+    const cells = [];
+    board.forEach((row, r) => {
+      row.forEach((letter, c) => {
+        const cell = document.createElement("div");
+        cell.textContent = letter;
+        cell.classList.add("cell");
+        cell.dataset.row = r;
+        cell.dataset.col = c;
+        boardDiv.appendChild(cell);
+        cells.push(cell);
+      });
+    });
+
+    // Mostrar lista de palabras
+    const wordsDiv = document.getElementById("words");
+    words.forEach(w => {
+      const span = document.createElement("span");
+      span.textContent = w;
+      span.id = w;
+      wordsDiv.appendChild(span);
+    });
+
+    // Selección de letras
+    let selected = "";
+    let selectedCells = [];
+    let foundWords = new Set();
+
+    function checkWin() {
+      if (foundWords.size === words.length) {
+        document.getElementById("message").style.display = "block";
+      }
+    }
+
+    cells.forEach(cell => {
+      cell.addEventListener("click", () => {
+        if (cell.classList.contains("found")) return;
+        cell.classList.add("selected");
+        selected += cell.textContent;
+        selectedCells.push(cell);
+
+        // Revisar si coincide con alguna palabra
+        words.forEach(word => {
+          if (selected.endsWith(word) || selected.endsWith(word.split("").reverse().join(""))) {
+            selectedCells.forEach(c => c.classList.add("found"));
+            document.getElementById(word).classList.add("found");
+            foundWords.add(word);
+            checkWin();
+            selected = "";
+            selectedCells = [];
+          }
+        });
+
+        // Reset si seleccionan demasiado
+        if (selected.length > 25) {
+          selectedCells.forEach(c => c.classList.remove("selected"));
+          selected = "";
+          selectedCells = [];
+        }
+      });
+    });
+  </script>
+</body>
+</html>
